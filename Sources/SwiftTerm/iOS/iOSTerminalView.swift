@@ -386,6 +386,9 @@ open class TerminalView: UIScrollView, UITextInputTraits, UIKeyInput, UIScrollVi
     
     // We use this as temporary storage for UITextInput, which we send to the terminal on demand
     var textInputStorage: String = ""
+    /// True while `textInputStorage` holds text read from the screen, not typed: see
+    /// `seedTextInputFromScreen`. The next typed text replaces it.
+    var textInputStorageIsFromScreen = false
     var pendingAutoPeriodDeleteWasSpace: Bool = false
     private var koreanResyllabificationTransaction = HangulInput.ResyllabificationTransaction()
 
@@ -2476,6 +2479,7 @@ open class TerminalView: UIScrollView, UITextInputTraits, UIKeyInput, UIScrollVi
     }
 
     private func commitTextInput(_ text: String, applyModifiers: Bool) {
+        dropTextInputSeededFromScreen()
         let hadPendingAutoPeriodDelete = pendingAutoPeriodDeleteWasSpace
         if !isAutoPeriodReplacement(text) {
             pendingAutoPeriodDeleteWasSpace = false
@@ -3103,6 +3107,7 @@ open class TerminalView: UIScrollView, UITextInputTraits, UIKeyInput, UIScrollVi
                 pendingAutoPeriodDeleteWasSpace = false
                 self.sendBackspaceKey()
                 uitiLog("deleteBackward() no text to delete, sending backspace")
+                seedTextInputFromScreen(unechoedBackspaces: 1)
                 return
             }
 
@@ -3142,6 +3147,9 @@ open class TerminalView: UIScrollView, UITextInputTraits, UIKeyInput, UIScrollVi
         _selectedTextRange = TextRange(from: rangeStartPosition, to: rangeStartPosition)
 
         endTextInputEdit()
+        if textInputStorage.isEmpty {
+            seedTextInputFromScreen(unechoedBackspaces: rangeToDelete.isEmpty ? 1 : rangeToDelete.length)
+        }
     }
 
     enum SendData {
